@@ -23,57 +23,50 @@
     align-items: center;
   }
 
-  /* Top bar — fixed height */
   #top-bar {
     flex-shrink: 0;
     width: 100%;
-    padding: 0.75rem 1.5rem;
+    padding: 0.6rem 1.5rem;
     display: flex;
     align-items: center;
   }
 
   #doc-title {
-    font-size: 0.75rem;
-    color: #444;
+    font-size: 0.7rem;
+    color: #3a3a3a;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     font-weight: 500;
   }
 
-  /* Stage fills remaining space */
+  /* Stage fills all remaining height */
   #stage {
     flex: 1;
     width: 100%;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     perspective: 2000px;
-    overflow: hidden;
     padding: 0 1rem;
-    min-height: 0;
   }
 
   .page-wrapper {
     position: relative;
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.06);
-    /* size is set by JS to fit the stage */
+    box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 0 0.5px rgba(255,255,255,0.05);
     flex-shrink: 0;
   }
 
   #canvas-current {
     display: block;
-    width: 100%;
-    height: 100%;
   }
 
   #canvas-next {
     display: none;
     position: absolute;
     top: 0; left: 0;
-    width: 100%;
-    height: 100%;
   }
 
   #flip-overlay {
@@ -82,7 +75,6 @@
     pointer-events: none;
     z-index: 10;
     display: none;
-    border-radius: 3px;
     overflow: hidden;
   }
 
@@ -99,7 +91,6 @@
     40%  { transform: rotateY(-60deg); opacity: 0.9; box-shadow: -20px 0 40px rgba(0,0,0,0.5); }
     100% { transform: rotateY(-180deg); opacity: 0; }
   }
-
   @keyframes flip-backward {
     0%   { transform: rotateY(-180deg); opacity: 0; }
     40%  { transform: rotateY(-120deg); opacity: 0.9; box-shadow: -20px 0 40px rgba(0,0,0,0.5); }
@@ -114,15 +105,14 @@
     animation: flip-backward 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  /* Controls bar — fixed height at bottom */
+  /* Controls always at bottom */
   #controls {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem 1rem;
-    width: 100%;
+    gap: 0.4rem;
+    padding: 0.6rem 1rem 0.8rem;
   }
 
   #page-track {
@@ -134,9 +124,9 @@
   .nav-btn {
     background: #1c1c1c;
     border: 1px solid #2e2e2e;
-    color: #ccc;
-    width: 36px;
-    height: 36px;
+    color: #bbb;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1rem;
@@ -147,55 +137,48 @@
     user-select: none;
     flex-shrink: 0;
   }
-
   .nav-btn:hover:not(:disabled) { background: #2a2a2a; border-color: #555; }
-  .nav-btn:disabled { opacity: 0.25; cursor: default; }
+  .nav-btn:disabled { opacity: 0.2; cursor: default; }
 
   #progress-dots {
     display: flex;
     gap: 4px;
     align-items: center;
-    max-width: 260px;
+    max-width: 280px;
     overflow: hidden;
   }
 
   .dot {
-    width: 5px;
-    height: 5px;
+    width: 5px; height: 5px;
     border-radius: 50%;
-    background: #333;
+    background: #2e2e2e;
     transition: background 0.2s, transform 0.2s;
     flex-shrink: 0;
     cursor: pointer;
   }
-
   .dot.active { background: #fff; transform: scale(1.4); }
   .dot.near   { background: #666; }
 
   #page-info {
-    font-size: 0.78rem;
-    color: #444;
-    text-align: center;
+    font-size: 0.72rem;
+    color: #3a3a3a;
   }
 
   #key-hint {
-    font-size: 0.7rem;
-    color: #2e2e2e;
+    font-size: 0.68rem;
+    color: #272727;
     display: flex;
     gap: 1rem;
   }
-
   #key-hint kbd {
     background: #1a1a1a;
-    border: 1px solid #2a2a2a;
+    border: 1px solid #262626;
     border-radius: 3px;
     padding: 1px 5px;
-    font-size: 0.68rem;
     font-family: inherit;
-    color: #444;
+    color: #3a3a3a;
   }
 
-  /* Loading */
   #loading {
     display: none;
     position: absolute;
@@ -210,7 +193,7 @@
   #loading.active { display: flex; }
 
   .spinner {
-    width: 28px; height: 28px;
+    width: 26px; height: 26px;
     border: 2px solid #2a2a2a;
     border-top-color: #777;
     border-radius: 50%;
@@ -267,11 +250,12 @@
 
   const PDF_PATH = 'https://raw.githubusercontent.com/NewMediaArtClub/machineZineVol1/main/machinezine.pdf';
 
-  let pdfDoc = null;
+  let pdfDoc     = null;
   let currentPage = 1;
-  let totalPages = 0;
+  let totalPages  = 0;
   let isAnimating = false;
-  let pageAspect = 1; // height / width
+  // Native PDF page dimensions (scale 1)
+  let nativeW = 1, nativeH = 1;
 
   const stage       = document.getElementById('stage');
   const pageWrapper = document.getElementById('page-wrapper');
@@ -286,31 +270,45 @@
   const loadingEl     = document.getElementById('loading');
   const errorMsg      = document.getElementById('error-msg');
 
-  // Work out display size from the stage dimensions and PDF aspect ratio
-  function getDisplaySize() {
-    const stageW = stage.clientWidth  - 32; // padding
-    const stageH = stage.clientHeight - 16;
-    const byWidth  = { w: stageW, h: stageW * pageAspect };
-    const byHeight = { w: stageH / pageAspect, h: stageH };
-    return byWidth.h <= stageH ? byWidth : byHeight;
+  // Page 1 is a single cover; all other pages are double-page spreads.
+  // We always render at the native PDF dimensions but scale the wrapper
+  // to fit the stage, using the spread aspect ratio from page 2 onwards
+  // so the display is correctly proportioned from the start.
+
+  function getDisplaySize(isSpread) {
+    const availW = stage.clientWidth  - 32;
+    const availH = stage.clientHeight - 8;
+    // For a spread, the logical width is 2x a single page width
+    const logicalW = isSpread ? nativeW * 2 : nativeW;
+    const aspect   = nativeH / logicalW; // h/w
+    const byWidth  = { w: availW, h: availW * aspect };
+    const byHeight = { w: availH / aspect, h: availH };
+    return byWidth.h <= availH ? byWidth : byHeight;
   }
 
-  function sizeWrapper() {
-    const { w, h } = getDisplaySize();
+  function isSpreadPage(pageNum) {
+    return pageNum > 1;
+  }
+
+  function sizeWrapper(pageNum) {
+    const { w, h } = getDisplaySize(isSpreadPage(pageNum));
     pageWrapper.style.width  = w + 'px';
     pageWrapper.style.height = h + 'px';
   }
 
-  // Render a PDF page into a canvas at the wrapper's pixel size
   async function renderPage(pageNum, targetCanvas) {
     const page = await pdfDoc.getPage(pageNum);
-    const { w, h } = getDisplaySize();
-    const dpr = window.devicePixelRatio || 1;
-    targetCanvas.width  = Math.round(w * dpr);
-    targetCanvas.height = Math.round(h * dpr);
+    const spread = isSpreadPage(pageNum);
+    const { w, h } = getDisplaySize(spread);
+    const dpr   = window.devicePixelRatio || 1;
+    const scale = (w * dpr) / nativeW;
+    const vp    = page.getViewport({ scale });
+
+    targetCanvas.width  = vp.width;
+    targetCanvas.height = vp.height;
     targetCanvas.style.width  = w + 'px';
     targetCanvas.style.height = h + 'px';
-    const vp = page.getViewport({ scale: (w * dpr) / page.getViewport({ scale: 1 }).width });
+
     await page.render({ canvasContext: targetCanvas.getContext('2d'), viewport: vp }).promise;
   }
 
@@ -318,15 +316,16 @@
     loadingEl.classList.add('active');
     try {
       pdfDoc = await pdfjsLib.getDocument(PDF_PATH).promise;
-      totalPages = pdfDoc.numPages;
+      totalPages  = pdfDoc.numPages;
       currentPage = 1;
 
-      // Get aspect ratio from first page
-      const firstPage = await pdfDoc.getPage(1);
-      const vp = firstPage.getViewport({ scale: 1 });
-      pageAspect = vp.height / vp.width;
+      // Grab native size from page 1
+      const p1 = await pdfDoc.getPage(1);
+      const vp  = p1.getViewport({ scale: 1 });
+      nativeW = vp.width;
+      nativeH = vp.height;
 
-      sizeWrapper();
+      sizeWrapper(1);
       await renderPage(1, canvasCurrent);
       loadingEl.classList.remove('active');
       buildDots();
@@ -337,7 +336,7 @@
       errorMsg.style.display = 'block';
       errorMsg.innerHTML =
         'Could not load <strong>machinezine.pdf</strong>.<br>' +
-        'Check the file URL and CORS settings.';
+        'Check the file URL and CORS settings.<br><small>' + err + '</small>';
     }
   }
 
@@ -350,23 +349,28 @@
     prevBtn.disabled = true;
     nextBtn.disabled = true;
 
+    // Pre-render target into canvasNext at the new size
+    sizeWrapper(target);
     await renderPage(target, canvasNext);
 
-    const w = canvasCurrent.width;
-    const h = canvasCurrent.height;
-    canvasFlip.width  = w;
-    canvasFlip.height = h;
+    // Snapshot current into flip canvas (using current canvas pixel dims)
+    const cw = canvasCurrent.width;
+    const ch = canvasCurrent.height;
+    canvasFlip.width  = cw;
+    canvasFlip.height = ch;
     canvasFlip.style.width  = canvasCurrent.style.width;
     canvasFlip.style.height = canvasCurrent.style.height;
     canvasFlip.getContext('2d').drawImage(canvasCurrent, 0, 0);
 
     flipOverlay.style.display = 'block';
 
-    const ctxC = canvasCurrent.getContext('2d');
-    ctxC.clearRect(0, 0, w, h);
-    ctxC.drawImage(canvasNext, 0, 0);
+    // Swap canvasCurrent to show next page
+    const ctx = canvasCurrent.getContext('2d');
+    canvasCurrent.width  = canvasNext.width;
+    canvasCurrent.height = canvasNext.height;
     canvasCurrent.style.width  = canvasNext.style.width;
     canvasCurrent.style.height = canvasNext.style.height;
+    ctx.drawImage(canvasNext, 0, 0);
 
     canvasFlip.classList.remove('flipping-forward', 'flipping-backward');
     void canvasFlip.offsetWidth;
@@ -390,6 +394,7 @@
     prevBtn.disabled = true;
     nextBtn.disabled = true;
     loadingEl.classList.add('active');
+    sizeWrapper(target);
     await renderPage(target, canvasCurrent);
     loadingEl.classList.remove('active');
     currentPage = target;
@@ -413,7 +418,9 @@
       d.title = `Page ${i}`;
       d.addEventListener('click', () => {
         if (isAnimating || i === currentPage) return;
-        Math.abs(i - currentPage) === 1 ? changePage(i > currentPage ? 1 : -1) : jumpToPage(i);
+        Math.abs(i - currentPage) === 1
+          ? changePage(i > currentPage ? 1 : -1)
+          : jumpToPage(i);
       });
       progressDots.appendChild(d);
     }
@@ -433,13 +440,12 @@
     });
   }
 
-  // Resize handler — re-size wrapper and re-render current page
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(async () => {
       if (!pdfDoc) return;
-      sizeWrapper();
+      sizeWrapper(currentPage);
       await renderPage(currentPage, canvasCurrent);
     }, 150);
   });
